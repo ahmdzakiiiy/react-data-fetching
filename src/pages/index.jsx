@@ -14,15 +14,21 @@ import {
   Th,
   Thead,
   Tr,
+  useToast,
   VStack,
 } from "@chakra-ui/react";
 import { useFetchProducts } from "@/features/product/useFetchProducts";
-import { useQuery } from "@tanstack/react-query";
-import { axiosInstance } from "@/lib/axios";
+import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
+import { axiosInstance } from "@/lib/axios";
 
 export default function Home() {
-  const { data, isLoading } = useFetchProducts();
+  const {
+    data,
+    isLoading,
+    refetch: refetchProducts,
+  } = useFetchProducts();
+  const toast = useToast();
 
   const formik = useFormik({
     initialValues: {
@@ -31,6 +37,37 @@ export default function Home() {
       stock: "",
       description: "",
       image: "",
+    },
+    onSubmit: async () => {
+      const { name, price, stock, description, image } = formik.values;
+      mutate({
+        name,
+        price: parseInt(price),
+        stock: parseInt(stock),
+        description,
+        image,
+      });
+      formik.setFieldValue("name", "");
+      formik.setFieldValue("price", 0);
+      formik.setFieldValue("stock", 0);
+      formik.setFieldValue("description", "");
+      formik.setFieldValue("image", "");
+
+      toast({
+        title: "Product added",
+        status: "success",
+      });
+    },
+  });
+
+  const { mutate } = useMutation({
+    mutationFn: async (body) => {
+      const productResponse = await axiosInstance.post("/products", body);
+
+      return productResponse;
+    },
+    onSuccess: () => {
+      refetchProducts();
     },
   });
 
@@ -64,7 +101,7 @@ export default function Home() {
       <main>
         <Container>
           <Heading>Hello World</Heading>
-          <Table mb="6">
+          <Table mb="7">
             <Thead>
               <Tr>
                 <Th>ID</Th>
@@ -81,32 +118,50 @@ export default function Home() {
               {isLoading && <Spinner />}
             </Tbody>
           </Table>
-          <text>
-            {formik.values.name}
-          </text>
-          <form>
+          <text>{formik.values.name}</text>
+          <form onSubmit={formik.handleSubmit}>
             <VStack spacing="3">
               <FormControl>
                 <FormLabel>Product Name:</FormLabel>
-                <Input onChange={handleFormInput} name="name" />
+                <Input
+                  onChange={handleFormInput}
+                  name="name"
+                  values={formik.values.name}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Price:</FormLabel>
-                <Input onChange={handleFormInput} name="price" />
+                <Input
+                  onChange={handleFormInput}
+                  name="price"
+                  values={formik.values.price}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Stock:</FormLabel>
-                <Input onChange={handleFormInput} name="stock" />
+                <Input
+                  onChange={handleFormInput}
+                  name="stock"
+                  values={formik.values.stock}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Description:</FormLabel>
-                <Input onChange={handleFormInput} name="description" />
+                <Input
+                  onChange={handleFormInput}
+                  name="description"
+                  values={formik.values.description}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Image:</FormLabel>
-                <Input onChange={handleFormInput} name="image" />
+                <Input
+                  onChange={handleFormInput}
+                  name="image"
+                  values={formik.values.image}
+                />
               </FormControl>
-              <Button>Submit Product</Button>
+              <Button type="submit">Submit Product</Button>
             </VStack>
           </form>
         </Container>
